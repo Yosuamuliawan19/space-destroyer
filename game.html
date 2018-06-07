@@ -1,0 +1,672 @@
+<html>
+
+
+<head>
+	<title>My first three.js app</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css?family=Tangerine');
+		body {
+			margin: 0;
+		}
+
+		canvas {
+			width: 100%;
+			height: 100%
+		}
+		#hud {
+			display:none;
+			z-index: 2;
+			position: absolute;
+			cursor: none;
+
+			width: 100%;
+			height: 100%
+		}
+		#score{
+			color: white;
+			font-family: 'Tangerine', sans-serif;
+			z-index: 2;
+			position: absolute;
+			text-align: center;
+			margin-left: 20px;
+			margin-top: 20px;
+		}
+		#loading{
+			z-index: 3;
+			position: absolute;
+		}
+	</style>
+</head>
+
+<body id='canvas'>
+	<img id='hud' src="images/hud.png" alt="hud here">
+	<div id="loading">
+	</div>
+	<script src="js/three.js"></script>
+	<script src="js/jquery-3.3.1.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/OBJLoader.js"></script>
+	<script src="js/THREEx.KeyboardState.js"></script>
+	<script src="js/AxesHelper.js"></script>
+	<script src="js/GPUParticleSystem.js"></script>
+	<script src="js/THREEx.FullScreen.js"></script>
+	<script src="js/THREEx.WindowResize.js"></script>
+	<script src="js/particle3D.js"></script>
+	<script src="js/PointerLockControls.js"></script>
+	<script src='js/THREEx.collider.js'></script>
+	<script src='js/THREEx.collidersystem.js'></script>
+	<!-- <script src='js/BabylonLoader.js'></script> -->
+
+	<h1 id="score">Score : 0</h1>
+	<!-- <div id='canvas'>
+
+	</div> -->
+	<script>
+		var scene, camera, renderer, controlsOrbit, raycaster;
+		var cube, plane, particleSystem, torus;
+		var republicAssaultShip;
+		var keyboard = new THREEx.KeyboardState();
+		var finishLoading = false;
+		var engine;
+		var bullets = [];
+		var planes =[];
+		var asteroids =[];
+
+
+		var instructions_background =  document.getElementById('instructions-background');
+		var instructions = document.getElementById('instructions');
+		var score_text = document.getElementById('score');
+		var score = 0;
+		var hud = document.getElementById('hud');
+		// for FPS
+		var element, pointerlockchange, pointerlockerror, controlsEnabled;
+		// for pointer Lock and click on instructions
+		var pointerlockavailable = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+		if (pointerlockavailable){
+			element = document.body;
+			pointerlockchange = function (event){
+				if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+					controlsEnabled = true;
+					controlsFPS.enabled = true;
+					console.log('controlfps enabled');
+				}else{
+					controlsFPS.enabled = false;
+					controlsEnabled = false;
+					console.log('controlfps disabled');
+				}
+			}
+			pointerlockerror = function ( event ) {
+			};
+			document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+			document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+			document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+			document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+			document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+			document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+
+		}else{
+			instructions.innerHTML = 'Woops ! Your browser doesnt support this game :(';
+		}
+
+		function init(){
+			// container
+			container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			// camera and controls
+			var cameraFOV = 100;
+			scene = new THREE.Scene();
+			// scene.fog = new THREE.FogExp2( '#000000', 0.0002	);
+			// initialize two types of controls and camera
+		 	cameraOrbit = new THREE.PerspectiveCamera(cameraFOV, window.innerWidth / window.innerHeight, 0.01, 10000000);
+			cameraFPS = new THREE.PerspectiveCamera(cameraFOV, window.innerWidth / window.innerHeight, 0.01, 10000000);
+			controlsOrbit = new THREE.OrbitControls( cameraOrbit );
+			controlsOrbit.enableKeys = false;
+               controlsOrbit.enableDamping = true;
+               controlsOrbit.enablePan = false;
+               controlsOrbit.dampingFactor = 0.1;
+               controlsOrbit.rotateSpeed = 0.1;
+               controlsOrbit.zoomSpeed = 3;
+               controlsOrbit.minDistance = 50;
+               controlsOrbit.maxDistance = 200;
+
+			controlsFPS = new THREE.PointerLockControls( cameraFPS );
+			// scene.add( controlsFPS.getObject() );
+
+			controlsFPS.enabled = false;
+			camera = cameraOrbit;
+
+			// renderer
+			renderer = new THREE.WebGLRenderer();
+			renderer.shadowMap = true;
+			renderer.shadowMap.type = THREE.PCFShadowMap;
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			container.appendChild(renderer.domElement);
+
+			THREEx.WindowResize(renderer, camera);
+			THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+
+			// lights
+			var ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+			scene.add(ambientLight);
+
+			var pointLight = new THREE.PointLight(0xffffff, 0.5, 0, 0.1);
+			pointLight.position.set( 0, 20000, 0 );
+			scene.add(pointLight);
+
+			// // AxesHelper
+			// var axesHelper = new THREE.AxesHelper( 1000 );
+			// scene.add( axesHelper );
+
+			//Audio
+			var audio = new Audio('music/space.mp3');
+			audio.play();
+
+			// Raycaster
+			raycaster = new THREE.Raycaster();
+
+		}
+		var score = 0;
+          var pivot;
+		function meshes(){
+			// cub0
+			// var cubeGeometry = new THREE.BoxGeometry(10, 10, 10);
+			// var boundBoxMaterial = new THREE.MeshPhongMaterial({color: 0xF3FFF2, shininess: 100, wireframe: true});
+			// cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+			// cube.position.set(0, 0, 0);
+			// cube.castShadow = true;
+			// scene.add(cube);
+
+               // pivot
+			var cubeGeometry = new THREE.BoxGeometry(10, 10, 10);
+			var cubeMaterial = new THREE.MeshLambertMaterial({transparent:true});
+               cubeMaterial.opacity = 0;
+			pivot = new THREE.Mesh(cubeGeometry, cubeMaterial);
+			pivot.position.set(0, 0, 0);
+
+			// plane
+			var planeGeometry = new THREE.PlaneGeometry(1000, 10000, 50, 500);
+			var planeMaterial = new THREE.PointsMaterial({color: 0xFFFFFF});
+			plane = new THREE.Points(planeGeometry, planeMaterial);
+			plane.position.set(0, -80, 0);
+			plane.rotation.x = -90 * ( Math.PI ) / 180;
+			plane.recieveShadow = true;
+			// scene.add(plane);
+
+			// torus
+			var torusGeometry = new THREE.TorusGeometry( 100, 30, 20, 20, Math.PI * 2);
+			var torusMaterial = new THREE.MeshStandardMaterial({wireframe: true});
+			torus = new THREE.Mesh(torusGeometry, torusMaterial);
+			torus.position.set(0, 0, -100);
+			scene.add(torus);
+
+			// particleSystem
+			particleSystem = new THREE.GPUParticleSystem( {	maxParticles: 250000} );
+			scene.add( particleSystem );
+
+			// particleSystem
+			snowParticleSystem = new THREE.GPUParticleSystem( {	maxParticles: 250000} );
+			scene.add( snowParticleSystem );
+
+			// earth
+			var texture = THREE.ImageUtils.loadTexture( 'images/earthmap.jpg' );
+			var geometry = new THREE.SphereGeometry( 1500, 320, 320 );
+			var material = new THREE.MeshBasicMaterial( {map : texture } );
+			var sphere = new THREE.Mesh( geometry, material );
+			sphere.position.set(4000,100,-1000);
+			sphere.rotation.y = -90 * 2 * ( Math.PI ) / 180;
+			scene.add( sphere );
+
+			var geometry = new THREE.BoxBufferGeometry( 20, 20, 20 );
+
+		}
+		// to load models
+		function models(){
+			var boundBoxMaterial = new THREE.MeshPhongMaterial({
+				 visible:false
+				 // toggle wireframe to see hitbox
+				 // wireframe:true
+			 });
+			var loader = new THREE.OBJLoader();
+			loader.load(
+				'models/Republic Assault Ship.obj',
+				function	 ( object ) {
+					var ObjMaterial = new THREE.MeshStandardMaterial({color: 0xdfac13, metalness : 0.7});
+					object.traverse( function ( child ) {
+				           if ( child instanceof THREE.Mesh ) {
+				                child.material = ObjMaterial;
+				            }
+					 });
+					object.rotation.x = -90 * ( Math.PI ) / 180;
+					object.rotation.z = -90 * 2 * ( Math.PI ) / 180;
+					republicAssaultShip = object;
+					republicAssaultShip.scale.set(0.00001,0.00001,0.00001);
+					scene.add( republicAssaultShip );
+					finishLoading = true;
+                         republicAssaultShip.add(pivot);
+                         pivot.rotation.x = -90 * ( Math.PI ) / 180;
+					pivot.rotation.z = -90 * 2 * ( Math.PI ) / 180;
+                         pivot.rotation.y = -90 * 2 * ( Math.PI ) / 180;
+                         pivot.scale.set(100000,100000,100000);
+                         pivot.add(cameraOrbit);
+					pivot.add(controlsFPS.getObject());
+					controlsFPS.getObject().position.set(0, 30, -20);
+					controlsFPS.getObject().rotation.y = -90 * 2 * ( Math.PI ) / 180;
+                         camera.position.set(0, 100, -100);
+					controlsOrbit.update();
+				},
+				function ( xhr ) {
+					console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+				},
+				function ( error ) {
+					console.log( 'An error happened' );
+				}
+			);
+			loader = new THREE.OBJLoader();
+			// load asteroids
+			// to generate meteor of different colors
+			var colArr =  ["#777a7f", "#9b9da0", "#8f9399"];
+			loader.load(
+			    'models/asteroid.obj',
+			    function ( object) {
+					object.scale.set(30,30,30);
+					// to change color
+					object.traverse( function ( child ) {
+					   if ( child instanceof THREE.Mesh ) {
+						   child.material.color.set(colArr[Math.round(Math.random*3)]) ;
+						   child.material.needsUpdate = true;
+					    }
+				   	});
+				   	// for hitbox
+					var cubeGeometry = new THREE.BoxGeometry(30, 30, 30);
+					var cubeMesh = new THREE.Mesh(cubeGeometry, boundBoxMaterial);
+					// randomize asteroid's size, position and rotation
+					for ( var i = 0; i < 500; i ++ ) {
+
+						var obj = new THREE.Mesh( cubeGeometry, boundBoxMaterial);
+						obj.position.x = Math.random() * 4000 - 2000;
+						obj.position.y = Math.random() * 4000 - 2000;
+						obj.position.z = Math.random() * 4000 - 2000;
+
+						obj.rotation.x = Math.random() * 2 * Math.PI;
+						obj.rotation.y = Math.random() * 2 * Math.PI;
+						obj.rotation.z = Math.random() * 2 * Math.PI;
+						obj.scale.x = Math.random() + 0.5;
+						obj.scale.y = Math.random() + 0.5;
+						obj.scale.z = Math.random() + 0.5;
+
+						var factor = (Math.random() *2) * ( Math.random());
+						if (Math.random() > 0.5){
+							obj.scale.set(
+								factor,factor,factor
+							)
+						}
+						var asteroid  = object.clone();
+
+						obj.add(asteroid);
+ 						scene.add( obj );
+					}
+			    }
+			);
+			loader = new THREE.ObjectLoader();
+
+			loader.load(
+			    'models/x-wing.json',
+			    function (object) {
+				   	// change initial shininess of model
+				    object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material.shininess = 0;
+							child.material.needsUpdate = true;
+						 }
+						 if ( child instanceof THREE.Light ) {
+ 							child.intensity  = 0;
+ 						 }
+					});
+					object.scale.set(30,30,30);
+					// Hit box
+					var cubeGeometry = new THREE.BoxGeometry(400,400, 400);
+					var cubeMesh = new THREE.Mesh(cubeGeometry, boundBoxMaterial);
+					// Randomize
+					for ( var i = 0; i < 5; i ++ ) {
+						var obj = new THREE.Mesh( cubeGeometry, boundBoxMaterial);
+						obj.position.x = Math.random() * 4000 - 2000;
+						obj.position.y = Math.random() * 4000 - 2000;
+						obj.position.z = Math.random() * 4000 - 2000;
+
+						obj.rotation.x = Math.random() * 2 * Math.PI;
+						obj.rotation.y = Math.random() * 2 * Math.PI;
+						obj.rotation.z = Math.random() * 2 * Math.PI;
+						var xwing  = object.clone();
+						obj.add(xwing)
+						planes.push(obj);
+						scene.add( obj );
+					}
+			    }
+			);
+			var x_wing = function (object ) {
+				object.scale.set(10,10,10);
+				var cubeGeometry = new THREE.BoxGeometry(20, 20, 20);
+				var cubeMesh = new THREE.Mesh(cubeGeometry, boundBoxMaterial);
+
+				for ( var i = 0; i < 10; i ++ ) {
+
+					var obj = new THREE.Mesh( cubeGeometry, boundBoxMaterial);
+					obj.position.x = Math.random() * 4000 - 2000;
+					obj.position.y = Math.random() * 4000 - 2000;
+					obj.position.z = Math.random() * 4000 - 2000;
+
+					obj.rotation.x = Math.random() * 2 * Math.PI;
+					obj.rotation.y = Math.random() * 2 * Math.PI;
+					obj.rotation.z = Math.random() * 2 * Math.PI;
+					obj.scale.x = Math.random() + 0.5;
+					obj.scale.y = Math.random() + 0.5;
+					obj.scale.z = Math.random() + 0.5;
+
+					var factor = (Math.random() *2) * ( Math.random());
+					if (Math.random() > 0.5){
+						obj.scale.set(
+							factor,factor,factor
+						)
+					}
+					var asteroid  = object.clone();
+					obj.add(asteroid)
+					// scene.add( obj );
+				}
+			 };
+			loader.load( "models/x-wing.json", x_wing );
+		}
+		var tick = 0, clock = new THREE.Clock();
+		// function to generate stars
+		function spawnStars(){
+			var options = {
+				position: new THREE.Vector3(),
+				positionRandomness: 100000,
+				velocity: new THREE.Vector3(),
+				velocityRandomness: .5,
+				color: 0xFFFFFF,
+				colorRandomness: .2,
+				turbulence: .5,
+				lifetime: 10000,
+				size: 5,
+				sizeRandomness: 10
+			};
+			for ( var x = 0; x < 1000 ; x++ ) {
+				particleSystem.spawnParticle( options );
+			}
+			particleSystem.update(100);
+			render();
+			console.log("stars");
+		}
+		// optional snow for the environment
+		// toggle by setting snowOn = true;
+		var snowOn = false;
+		var starOn = true;
+		var fpsMode = false;
+		var snowOptions = {
+			position: new THREE.Vector3(0,1000,0),
+			positionRandomness: 10000,
+			velocity: new THREE.Vector3(0,-500,0),
+			velocityRandomness: .5,
+			color: 0xFFFFFF,
+			colorRandomness: .2,
+			turbulence: .1,
+			lifetime: 200,
+			size: 20,
+			sizeRandomness: 10
+		};
+		var tick = 0;
+		function snow (){
+			for ( var x = 0; x < 10 ; x++ ) {
+				snowParticleSystem.spawnParticle( snowOptions );
+			}
+			snowParticleSystem.update(tick);
+			tick++;
+			render();
+		}
+		// function to switch between two camera view
+		function changeCameraMode(){
+			fpsMode = !fpsMode;
+			if (fpsMode){
+				camera = cameraFPS;
+				controlsOrbit.enabled = false;
+				controlsFPS.enabled = true;
+				hud.style.display = "block";
+				element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+				element.requestPointerLock();
+			}else{
+				camera = cameraOrbit;
+				controlsFPS.enabled = false;
+				controlsOrbit.enabled = true;
+				hud.style.display = "none";
+				document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+				document.exitPointerLock();
+			}
+		}
+		var moveDistance = 0;
+		var acceleration = 0.03;
+		var topSpeed = 4;
+		var rotation = 0.06;
+		var tilt = 0.00005;
+		// keyboard controls and movement
+		function keyboardControls(){
+			var pressed = false;
+			if ( keyboard.pressed("a") ){
+				republicAssaultShip.rotation.z += rotation;
+				pressed = true;
+			}
+			if ( keyboard.pressed("d") ){
+				republicAssaultShip.rotation.z -= rotation;
+				pressed = true;
+			}
+			if ( keyboard.pressed("w") ){
+				republicAssaultShip.translateY(-moveDistance) ;
+				pressed = true;
+			}
+			if ( keyboard.pressed("s") ){
+				republicAssaultShip.translateY(moveDistance);
+				pressed = true;
+			}
+			if ( keyboard.pressed("down") ){
+				republicAssaultShip.rotation.x += -rotation ;
+				pressed = true;
+			}
+			if ( keyboard.pressed("up") ){
+				republicAssaultShip.rotation.x += rotation ;
+				pressed = true;
+			}
+			if ( keyboard.pressed("space") ){
+			}
+			if (pressed){
+				if (moveDistance < topSpeed)
+				moveDistance += acceleration;
+			}else{
+				moveDistance = 0;
+			}
+		}
+		$('#canvas').mousedown(function(event) {
+			switch (event.which) {
+				case 1:
+					console.log('Left Mouse button pressed.');
+					shoot();
+					break;
+				case 2:
+					console.log('Middle Mouse button pressed.');
+					changeCameraMode();
+					break;
+				case 3:
+					console.log('Right Mouse button pressed.');
+					break;
+				default:
+					console.log('You have a strange Mouse!');
+			}
+		});
+		var arrow;
+		var intersects = [];
+		var shootSound = new Audio('music/shoot.mp3');
+
+		function shoot(){
+			// ray cast
+			var mouse = new THREE.Vector2();
+			mouse.x = 0;
+			mouse.y = 1.12 - 1;
+			raycaster.setFromCamera( mouse, cameraFPS );
+			intersect = raycaster.intersectObjects( scene.children );
+			intersects = intersects.concat(intersect);
+			console.log("shoot");
+			if (intersect.length == 0 )return;
+			// bullet
+			shootSound.play();
+			var bullet = new THREE.Mesh(
+				new THREE.SphereGeometry(1,1,20),
+				new THREE.MeshBasicMaterial({color: 0xFFFFFF})
+			);
+			var dir = new THREE.Vector3();
+			dir.subVectors(  intersect[ 0 ].object.position, republicAssaultShip.getWorldPosition() ).normalize();
+			dir.multiplyScalar(4);
+			bullet.velocity = dir;
+			bullet.position.set(
+				republicAssaultShip.position.x,
+				republicAssaultShip.position.y,
+				republicAssaultShip.position.z,
+			);
+			bullet.alive = true;
+			bullets.push(bullet);
+			setTimeout(function(){
+				bullet.alive = false;
+				scene.remove(bullet);
+			}, 5000);
+			scene.add(bullet);
+		}
+		var explosions = [];
+		var dirs = [];
+		var totalObjects = 500;
+		var movementSpeed = 10;
+		var objectSize = 1;
+		// explosion function
+		function ExplodeAnimation(x,y,z)
+		{
+			objectSize = Math.random()*5;
+		  	var geometry = new THREE.Geometry();
+		  	for (i = 0; i < totalObjects; i ++)
+		  	{
+		    		var vertex = new THREE.Vector3();
+		    		vertex.x = x;
+		    		vertex.y = y;
+		    		vertex.z = z;
+		    		geometry.vertices.push( vertex );
+		    		dirs.push({x:(Math.random() * movementSpeed)-(movementSpeed/2),y:(Math.random() * movementSpeed)-(movementSpeed/2),z:(Math.random() * movementSpeed)-(movementSpeed/2)});
+		  	}
+		  	var material = new THREE.PointsMaterial( { size: objectSize,  color:Math.random() * 0xffffff  });
+		  	var particles = new THREE.Points( geometry, material );
+		  	this.object = particles;
+		  	this.status = true;
+		  	this.xDir = (Math.random() * movementSpeed)-(movementSpeed/2);
+		  	this.yDir = (Math.random() * movementSpeed)-(movementSpeed/2);
+		  	this.zDir = (Math.random() * movementSpeed)-(movementSpeed/2);
+		  	scene.add(this.object);
+		  	this.update = function(i){
+			    	if (this.status == true){
+			      	var cnt = totalObjects;
+			      	while(cnt--) {
+			        		this.object.geometry.vertices[cnt].y += dirs[i+cnt].y;
+			        		this.object.geometry.vertices[cnt].x += dirs[i+cnt].x;
+			        		this.object.geometry.vertices[cnt].z += dirs[i+cnt].z;
+			      	}
+					this.object.geometry.verticesNeedUpdate = true;
+				}
+			}
+		}
+		function render (){
+		 	renderer.render(scene, camera);
+		}
+		var orbit = function(radius) {
+    			return {x: (Math.sin((Date.now()% 60000)/60000 * Math.PI * 2) * radius),
+            		z: (Math.cos((Date.now()%60000)/60000 * Math.PI * 2) * radius)};
+		}
+		var initpos =  orbit(50);
+		function animate(){
+			if (finishLoading){
+				keyboardControls();
+				render();
+                    if (snowOn) snow();
+                    // cube.rotation.x += 0.01;
+                    // cube.rotation.y += 0.005;
+                    controlsOrbit.update();
+				// update ship position
+				for (i=0;i<planes.length;i++){
+					planes[i].position.x += 1;
+				}
+				// orbit of asteroid
+				for (i=0;i<asteroids.length;i++){
+					var pos = orbit(50);
+					asteroids[i].position.x += (pos.x - initpos.x)/300;
+					asteroids[i].position.z += (pos.z - initpos.z)/300;
+				}
+				// console.log(explosions.length);
+				for (i=0;i<explosions.length;i++){
+					explosions[i].update(i*totalObjects);
+				}
+				// collision detection
+				var updateScore = false;
+				for(var index=0; index<bullets.length; index++){
+					if( bullets[index] === undefined ) continue;
+					if( bullets[index].alive == false ){
+						scene.remove(bullets[index]);
+						bullets.splice(index,1);
+						continue;
+					}
+					// move the bullet and collision detection
+					for (var i=0;i<1;i++){
+						bullets[index].position.add(bullets[index].velocity);
+						for (var j=0;j<intersects.length;j++){
+							// var box = new THREE.Box3().setFromObject( intersects[i].object );
+							// console.log(box.max);
+							if (
+								(intersects[j].object.position.x - bullets[index].position.x) < 10 &&
+								(intersects[j].object.position.y - bullets[index].position.y) < 10 &&
+								(intersects[j].object.position.z - bullets[index].position.z) < 10
+								// bullets[index].position.x > box.min.x && bullets[index].position.x < box.max.x &&
+								// bullets[index].position.y > box.min.y && bullets[index].position.y < box.max.y &&
+								// bullets[index].position.z > box.min.z && bullets[index].position.z < box.max.z
+							){
+								scene.remove(intersects[j].object);
+								intersects.splice(j,1);
+								bullets[index].alive = false;
+								updateScore = true;
+								explosions.push( new ExplodeAnimation(	bullets[index].position.x,
+												bullets[index].position.y,
+												bullets[index].position.z) ) ;
+								console.log(explosions.length);
+							}
+							delete box;
+						}
+					}
+				}
+				if (updateScore) score_text.innerHTML = "Score : " + (++score);
+			}
+			requestAnimationFrame(animate);
+		}
+		// function to cleanup explosions particles
+		function cleanUp(){
+			var cnt = explosions.length;
+			while (cnt--){
+				scene.remove(explosions[cnt].object);
+			}
+			var cnt = explosions.length;
+			while (cnt--){
+				explosions.splice(cnt, 1);
+			}
+			setTimeout(cleanUp, 120000);
+		}
+		init();
+		meshes();
+		models();
+		if (starOn)spawnStars();
+		animate();
+		cleanUp();
+
+	</script>
+
+</body>
+
+</html>
