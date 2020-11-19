@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css?family=Tangerine');
+@import url('https://fonts.googleapis.com/css?family=Montserrat');
 
 html, body
 {
@@ -19,7 +19,8 @@ html, body
 }
 
 *{
-    font-family: 'Tangerine', sans-serif;
+    font-family: 'Montserrat', sans-serif;
+  color: white;
 }
 
 
