@@ -1,21 +1,124 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8″>
-  <title>Ghost Runner</title>
-  <link rel="stylesheet" href="ghost.css" type="text/css" media="screen">
-  <link rel="stylesheet" type="text/css" href="Style.css">
-</head>
-<body>
-   <div id="end">
-       <h1>Space Destroyer</h1>
-                
-                <div class="ins"> W, A, S, D to move </div>  
-                                                                                          <div class="ins"> Middle mouse - FPS Mode </div>
-                                                                                         <div class="ins"> Left mouse - Shoot</div>
-                                                                                         <div class="ins"> Scroll - Zoom in /out </div>
-       <input type="button" class="btn" onclick="location.href= 'game.html'" value="Play">
-                                                                                       
-   </div>
-</body>
+	<head>
+		<title>Space destroyer</title>
+		<style>
+			@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+
+			body {
+				background-color: white;
+				display: flex;
+				flex-direction: row;
+				padding: 48px;
+			}
+			.home-img {
+				width: 60vw;
+				height: 60vh;
+				object-fit: contain;
+			}
+			.ins {
+				display: block;
+				padding-left: 80px;
+			}
+			.box {
+				border: 0.1px solid rgba(0, 0, 0, 0.1);
+				padding: 16px 32px;
+				border-radius: 8px;
+				margin-bottom: 32px;
+			}
+			* {
+				font-family: 'Montserrat', sans-serif;
+			}
+			.title {
+				font-size: 36px;
+				font-weight: 600;
+				margin-top: 15vh;
+				padding-top: 15%;
+				margin-bottom: 8px;
+			}
+			.subtitle {
+				/* font-size: 36px; */
+				margin-bottom: 32px;
+			}
+			.btn {
+				border-radius: 32px;
+				border: 1px solid rgba(0, 0, 0, 0.1);
+				padding: 16px 48px;
+				background-color: white;
+				margin-bottom: 32px;
+			}
+			.btn:hover {
+				cursor: pointer;
+				border: 1px solid#3e6ae1;
+				color: #3e6ae1;
+				font-weight: bold;
+			}
+			.fadeInUp {
+				animation-duration: 1.2s;
+				animation-fill-mode: both;
+				-webkit-animation-duration: 1.2s;
+				-webkit-animation-fill-mode: both;
+				opacity: 0;
+				animation-name: fadeInUp;
+				-webkit-animation-name: fadeInUp;
+			}
+
+			@media only screen and (max-width: 1080px) {
+				body {
+					flex-direction: column;
+					align-items: center;
+				}
+				.ins {
+					padding-top: 0;
+					padding-left: 0;
+				}
+				.title {
+					margin-top: 0;
+					padding-left: 0;
+				}
+				.home-img {
+					width: 75vw;
+					height: auto;
+				}
+			}
+
+			@keyframes fadeInUp {
+				from {
+					transform: translate3d(0, 20px, 0);
+				}
+				to {
+					transform: translate3d(0, 0, 0);
+					opacity: 1;
+				}
+			}
+			@keyframes fadeInDown {
+				from {
+					transform: translate3d(0, -20px, 0);
+				}
+				to {
+					transform: translate3d(0, 0, 0);
+					opacity: 1;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<img
+			src="https://res.cloudinary.com/yosuam19/image/upload/v1612079757/Artboard_1_fgs9xb.png"
+			class="home-img fadeInUp"
+		/>
+		<div class="ins">
+			<div class="title">Space destroyer</div>
+			<div class="subtitle">
+				A WebGL based space exploration and shooting game
+			</div>
+			<div class="box">
+				<div>Move - W, A, S, D</div>
+				<div>Middle mouse - FPS Mode</div>
+				<div>Left mouse - Shoot</div>
+				<div>Scroll - Zoom in /out</div>
+			</div>
+			<button onclick="location.href= 'game.html'" class="btn">Play</button>
+		</div>
+	</body>
 </html>
