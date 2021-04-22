@@ -6,7 +6,7 @@
 			@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
 
 			body {
-				background-color: white;
+				background-color: black;
 				display: flex;
 				flex-direction: row;
 				padding: 48px;
@@ -25,9 +25,11 @@
 				padding: 16px 32px;
 				border-radius: 8px;
 				margin-bottom: 32px;
+				background-color: white;
 			}
 			* {
 				font-family: 'Montserrat', sans-serif;
+				color:white;
 			}
 			.title {
 				font-size: 36px;
@@ -35,10 +37,12 @@
 				margin-top: 15vh;
 				padding-top: 15%;
 				margin-bottom: 8px;
+				color: white;
 			}
 			.subtitle {
 				/* font-size: 36px; */
 				margin-bottom: 32px;
+				color: white;
 			}
 			.btn {
 				border-radius: 32px;
@@ -230,6 +234,9 @@
 	</head>
 	<body>
 	<div class="galaxy">
+		
+            <div class="stars"></div>
+        </div>
 		<img
 			src="https://res.cloudinary.com/yosuam19/image/upload/v1612079757/Artboard_1_fgs9xb.png"
 			class="home-img fadeInUp"
@@ -247,8 +254,5 @@
 			</div>
 			<button onclick="location.href= 'game.html'" class="btn">Play</button>
 		</div>
-            <div class="stars"></div>
-        </div>
-		
 	</body>
 </html>
